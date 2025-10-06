@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TreinoFit</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .lime-glow {
+            box-shadow: 0 0 5px #a3e635, 0 0 10px #a3e635, 0 0 15px #a3e635;
+        }
+        .modal-backdrop {
+            background-color: rgba(0,0,0,0.7);
+        }
+    </style>
+</head>
+<body class="bg-zinc-900 text-white antialiased">
+
+    <div id="app" class="max-w-lg mx-auto min-h-screen bg-black p-4 sm:p-6 space-y-6">
+
+        <!-- Cabeçalho -->
+        <header class="text-center space-y-2">
+            <h1 class="text-4xl font-bold text-lime-400">TreinoFit</h1>
+            <p class="text-zinc-300 text-lg">Bora treinar 💪</p>
+        </header>
+
+        <!-- Navegação -->
+        <nav class="flex justify-around bg-zinc-800 p-2 rounded-full">
+            <button data-tab="workouts" class="tab-btn active-tab flex-1 text-center py-2 px-4 rounded-full font-semibold transition-all duration-300">Treinos</button>
+            <button data-tab="timer" class="tab-btn flex-1 text-center py-2 px-4 rounded-full font-semibold transition-all duration-300">Timer</button>
+            <button data-tab="history" class="tab-btn flex-1 text-center py-2 px-4 rounded-full font-semibold transition-all duration-300">Histórico</button>
+        </nav>
+
+        <!-- Seções de Conteúdo -->
+        <main>
+            <!-- Seção de Treinos -->
+            <section id="workouts-section" class="content-section space-y-4">
+                <div class="flex gap-4">
+                    <button id="add-workout-btn" class="w-full bg-lime-500 hover:bg-lime-600 text-black font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105">
+                        Criar Treino
+                    </button>
+                    <button id="import-workout-btn" class="w-full bg-zinc-700 hover:bg-zinc-600 text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105 flex items-center justify-center gap-2">
+                        Importar 📁
+                    </button>
+                    <input type="file" id="file-input" class="hidden" accept=".pdf,.doc,.docx">
+                </div>
+                <div id="workouts-list" class="space-y-3">
+                    <!-- Lista de treinos será inserida aqui -->
+                </div>
+            </section>
+
+            <!-- Seção do Timer -->
+            <section id="timer-section" class="content-section hidden text-center space-y-4 p-6 bg-zinc-800 rounded-2xl">
+                <h2 class="text-2xl font-bold text-lime-400">Timer de Descanso</h2>
+                <div id="timer-display" class="text-7xl font-mono font-bold">01:00</div>
+                <div class="flex justify-center gap-2">
+                    <button data-time="30" class="time-preset-btn bg-zinc-700 hover:bg-zinc-600 py-2 px-4 rounded-full">30s</button>
+                    <button data-time="60" class="time-preset-btn bg-zinc-700 hover:bg-zinc-600 py-2 px-4 rounded-full">1m</button>
+                    <button data-time="90" class="time-preset-btn bg-zinc-700 hover:bg-zinc-600 py-2 px-4 rounded-full">1m30s</button>
+                    <button data-time="120" class="time-preset-btn bg-zinc-700 hover:bg-zinc-600 py-2 px-4 rounded-full">2m</button>
+                </div>
+                <div class="flex justify-center gap-4">
+                    <button id="start-timer-btn" class="bg-lime-500 hover:bg-lime-600 text-black font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">Iniciar</button>
+                    <button id="reset-timer-btn" class="bg-zinc-700 hover:bg-zinc-600 text-white font-bold py-3 px-6 rounded-lg transition-transform transform hover:scale-105">Resetar</button>
+                </div>
+            </section>
+
+            <!-- Seção de Histórico -->
+            <section id="history-section" class="content-section hidden space-y-4 p-4 bg-zinc-800 rounded-2xl">
+                 <h2 class="text-2xl font-bold text-center text-lime-400">Gráfico de Evolução</h2>
+                 <div class="bg-zinc-900 p-2 rounded-lg">
+                    <canvas id="progress-chart"></canvas>
+                 </div>
+                 <h3 class="text-xl font-bold text-center text-lime-400 pt-4">Sessões Anteriores</h3>
+                 <div id="history-list" class="space-y-2 max-h-60 overflow-y-auto">
+                    <!-- Lista de histórico aqui -->
+                 </div>
+            </section>
+        </main>
+
+    </div>
+
+    <!-- Modal de Criar/Editar Treino -->
+    <div id="workout-modal" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4">
+        <div class="bg-zinc-800 w-full max-w-md rounded-2xl p-6 space-y-4 max-h-[90vh] flex flex-col">
+            <h2 id="modal-title" class="text-2xl font-bold text-lime-400">Criar Novo Treino</h2>
+            <input type="hidden" id="workout-id">
+            <input id="workout-name" type="text" placeholder="Nome do Treino (Ex: Pernas Intenso)" class="w-full bg-zinc-700 border-2 border-zinc-600 rounded-lg p-3 focus:outline-none focus:border-lime-500">
+            <div id="exercises-container" class="flex-grow overflow-y-auto space-y-3 pr-2">
+                <!-- Exercícios adicionados aqui -->
+            </div>
+            <button id="add-exercise-btn" class="w-full bg-zinc-700 hover:bg-zinc-600 py-2 rounded-lg font-semibold transition">+ Adicionar Exercício</button>
+            <div class="flex gap-4 pt-4">
+                <button id="cancel-workout-btn" class="w-full bg-zinc-600 hover:bg-zinc-500 py-3 rounded-lg font-bold transition">Cancelar</button>
+                <button id="save-workout-btn" class="w-full bg-lime-500 hover:bg-lime-600 text-black py-3 rounded-lg font-bold transition">Salvar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Visualização de Treino -->
+    <div id="view-workout-modal" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4">
+        <div class="bg-zinc-800 w-full max-w-md rounded-2xl p-6 space-y-4 max-h-[90vh] flex flex-col">
+            <h2 id="view-workout-name" class="text-2xl font-bold text-lime-400 truncate"></h2>
+            <div id="view-exercises-list" class="flex-grow overflow-y-auto space-y-2 pr-2">
+                <!-- Detalhes do treino aqui -->
+            </div>
+            <div class="flex gap-4 pt-4">
+                 <button id="close-view-btn" class="w-full bg-zinc-600 hover:bg-zinc-500 py-3 rounded-lg font-bold transition">Fechar</button>
+                <button id="start-session-btn" class="w-full bg-lime-500 hover:bg-lime-600 text-black py-3 rounded-lg font-bold transition">Iniciar Sessão</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = {
+                state: {
+                    workouts: [],
+                    history: [],
+                    timer: {
+                        duration: 60,
+                        remaining: 60,
+                        interval: null,
+                        isRunning: false
+                    }
+                },
+
+                elements: {
+                    tabBtns: document.querySelectorAll('.tab-btn'),
+                    contentSections: document.querySelectorAll('.content-section'),
+                    workoutsList: document.getElementById('workouts-list'),
+                    addWorkoutBtn: document.getElementById('add-workout-btn'),
+                    importWorkoutBtn: document.getElementById('import-workout-btn'),
+                    fileInput: document.getElementById('file-input'),
+                    // Modal Criar/Editar
+                    workoutModal: document.getElementById('workout-modal'),
+                    modalTitle: document.getElementById('modal-title'),
+                    workoutIdInput: document.getElementById('workout-id'),
+                    workoutNameInput: document.getElementById('workout-name'),
+                    exercisesContainer: document.getElementById('exercises-container'),
+                    addExerciseBtn: document.getElementById('add-exercise-btn'),
+                    cancelWorkoutBtn: document.getElementById('cancel-workout-btn'),
+                    saveWorkoutBtn: document.getElementById('save-workout-btn'),
+                    // Modal Visualizar
+                    viewWorkoutModal: document.getElementById('view-workout-modal'),
+                    viewWorkoutName: document.getElementById('view-workout-name'),
+                    viewExercisesList: document.getElementById('view-exercises-list'),
+                    closeViewBtn: document.getElementById('close-view-btn'),
+                    startSessionBtn: document.getElementById('start-session-btn'),
+                    // Timer
+                    timerDisplay: document.getElementById('timer-display'),
+                    startTimerBtn: document.getElementById('start-timer-btn'),
+                    resetTimerBtn: document.getElementById('reset-timer-btn'),
+                    timePresetBtns: document.querySelectorAll('.time-preset-btn'),
+                    // Histórico
+                    historyList: document.getElementById('history-list'),
+                    chartCanvas: document.getElementById('progress-chart'),
+                },
+                
+                chartInstance: null,
+
+                init() {
+                    this.loadState();
+                    this.attachEventListeners();
+                    this.renderWorkouts();
+                    this.renderHistory();
+                    this.updateTimerDisplay();
+                    this.elements.tabBtns[0].click(); // Ativa a primeira aba
+                },
+
+                attachEventListeners() {
+                    this.elements.tabBtns.forEach(btn => {
+                        btn.addEventListener('click', () => this.handleTabClick(btn.dataset.tab));
+                    });
+
+                    this.elements.addWorkoutBtn.addEventListener('click', () => this.openWorkoutModal());
+                    this.elements.importWorkoutBtn.addEventListener('click', () => this.elements.fileInput.click());
+                    this.elements.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+                    
+                    this.elements.cancelWorkoutBtn.addEventListener('click', () => this.closeWorkoutModal());
+                    this.elements.saveWorkoutBtn.addEventListener('click', () => this.saveWorkout());
+                    this.elements.addExerciseBtn.addEventListener('click', () => this.addExerciseInput());
+
+                    this.elements.closeViewBtn.addEventListener('click', () => this.closeViewModal());
+                    this.elements.startSessionBtn.addEventListener('click', () => this.startWorkoutSession());
+
+                    this.elements.startTimerBtn.addEventListener('click', () => this.toggleTimer());
+                    this.elements.resetTimerBtn.addEventListener('click', () => this.resetTimer());
+                    this.elements.timePresetBtns.forEach(btn => {
+                        btn.addEventListener('click', () => this.setTimerDuration(parseInt(btn.dataset.time, 10)));
+                    });
+                },
+
+                handleTabClick(tabId) {
+                    this.elements.contentSections.forEach(section => {
+                        section.classList.add('hidden');
+                    });
+                    document.getElementById(`${tabId}-section`).classList.remove('hidden');
+
+                    this.elements.tabBtns.forEach(btn => {
+                        btn.classList.remove('active-tab', 'bg-lime-500', 'text-black');
+                        if (btn.dataset.tab === tabId) {
+                            btn.classList.add('active-tab', 'bg-lime-500', 'text-black');
+                        }
+                    });
+                    
+                    if (tabId === 'history' && this.state.history.length > 0) {
+                        this.renderChart();
+                    }
+                },
+                
+                // Lógica de Treinos
+                renderWorkouts() {
+                    this.elements.workoutsList.innerHTML = '';
+                    if (this.state.workouts.length === 0) {
+                        this.elements.workoutsList.innerHTML = `<p class="text-center text-zinc-400 p-8">Nenhum treino salvo. Crie um novo ou importe um arquivo!</p>`;
+                        return;
+                    }
+                    this.state.workouts.forEach(workout => {
+                        const isImported = workout.type === 'imported';
+                        const workoutEl = document.createElement('div');
+                        workoutEl.className = 'bg-zinc-800 p-4 rounded-lg flex justify-between items-center cursor-pointer hover:bg-zinc-700 transition';
+                        workoutEl.innerHTML = `
+                            <div>
+                                <h3 class="font-bold text-lg">${workout.name}</h3>
+                                <p class="text-sm text-zinc-400">${isImported ? 'Arquivo importado' : `${workout.exercises.length} exercícios`}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                ${!isImported ? `<button data-id="${workout.id}" class="edit-btn bg-blue-500/20 text-blue-300 hover:bg-blue-500/40 p-2 rounded-md">✏️</button>` : ''}
+                                <button data-id="${workout.id}" class="delete-btn bg-red-500/20 text-red-300 hover:bg-red-500/40 p-2 rounded-md">🗑️</button>
+                            </div>
+                        `;
+                        workoutEl.addEventListener('click', (e) => {
+                           if (e.target.closest('.edit-btn')) {
+                                this.openWorkoutModal(workout.id);
+                           } else if (e.target.closest('.delete-btn')) {
+                                this.deleteWorkout(workout.id);
+                           } else {
+                               if (isImported) {
+                                   this.viewImportedWorkout(workout);
+                               } else {
+                                   this.openViewModal(workout.id);
+                               }
+                           }
+                        });
+                        this.elements.workoutsList.appendChild(workoutEl);
+                    });
+                },
+                
+                handleFileUpload(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const newWorkout = {
+                            id: Date.now(),
+                            name: file.name,
+                            type: 'imported',
+                            dataUrl: e.target.result,
+                        };
+                        this.state.workouts.push(newWorkout);
+                        this.saveState();
+                        this.renderWorkouts();
+                    };
+                    reader.readAsDataURL(file);
+                    
+                    // Reset input para permitir upload do mesmo arquivo novamente
+                    event.target.value = ''; 
+                },
+
+                viewImportedWorkout(workout) {
+                    // Abre o arquivo PDF/DOCX em uma nova aba
+                    const newWindow = window.open();
+                    newWindow.document.write(`<iframe src="${workout.dataUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                    newWindow.document.title = workout.name;
+                },
+
+                openWorkoutModal(id = null) {
+                    this.elements.exercisesContainer.innerHTML = '';
+                    if (id) {
+                        const workout = this.state.workouts.find(w => w.id === id);
+                        this.elements.modalTitle.textContent = 'Editar Treino';
+                        this.elements.workoutIdInput.value = id;
+                        this.elements.workoutNameInput.value = workout.name;
+                        workout.exercises.forEach(ex => this.addExerciseInput(ex.name, ex.details));
+                    } else {
+                        this.elements.modalTitle.textContent = 'Criar Novo Treino';
+                        this.elements.workoutIdInput.value = '';
+                        this.elements.workoutNameInput.value = '';
+                        this.addExerciseInput(); // Começa com um campo
+                    }
+                    this.elements.workoutModal.classList.remove('hidden');
+                    this.elements.workoutModal.classList.add('flex');
+                },
+
+                closeWorkoutModal() {
+                    this.elements.workoutModal.classList.add('hidden');
+                    this.elements.workoutModal.classList.remove('flex');
+                },
+
+                addExerciseInput(name = '', details = '') {
+                    const exerciseEl = document.createElement('div');
+                    exerciseEl.className = 'exercise-item flex gap-2 items-center';
+                    exerciseEl.innerHTML = `
+                        <div class="flex-grow space-y-1">
+                            <input type="text" value="${name}" placeholder="Nome do exercício" class="ex-name w-full bg-zinc-700 p-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-lime-500">
+                            <input type="text" value="${details}" placeholder="Séries x Reps (Ex: 3x12)" class="ex-details w-full bg-zinc-700 p-2 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-lime-500">
+                        </div>
+                        <button class="remove-exercise-btn text-red-400 hover:text-red-300 p-2">&times;</button>
+                    `;
+                    exerciseEl.querySelector('.remove-exercise-btn').addEventListener('click', () => exerciseEl.remove());
+                    this.elements.exercisesContainer.appendChild(exerciseEl);
+                },
+
+                saveWorkout() {
+                    const id = this.elements.workoutIdInput.value;
+                    const name = this.elements.workoutNameInput.value.trim();
+                    if (!name) {
+                        alert('Por favor, dê um nome ao treino.');
+                        return;
+                    }
+                    const exercises = [];
+                    document.querySelectorAll('.exercise-item').forEach(item => {
+                        const exName = item.querySelector('.ex-name').value.trim();
+                        const exDetails = item.querySelector('.ex-details').value.trim();
+                        if (exName && exDetails) {
+                            exercises.push({ name: exName, details: exDetails });
+                        }
+                    });
+
+                    if (id) { // Editando
+                        const index = this.state.workouts.findIndex(w => w.id == id);
+                        this.state.workouts[index] = { ...this.state.workouts[index], name, exercises };
+                    } else { // Criando
+                        this.state.workouts.push({ id: Date.now(), name, type: 'manual', exercises });
+                    }
+                    
+                    this.saveState();
+                    this.renderWorkouts();
+                    this.closeWorkoutModal();
+                },
+
+                deleteWorkout(id) {
+                    if (confirm('Tem certeza que deseja apagar este treino?')) {
+                        this.state.workouts = this.state.workouts.filter(w => w.id !== id);
+                        this.saveState();
+                        this.renderWorkouts();
+                    }
+                },
+                
+                openViewModal(id) {
+                    const workout = this.state.workouts.find(w => w.id === id);
+                    if (!workout) return;
+                    this.elements.viewWorkoutName.textContent = workout.name;
+                    this.elements.viewExercisesList.innerHTML = '';
+                    workout.exercises.forEach(ex => {
+                        const li = document.createElement('div');
+                        li.className = 'bg-zinc-700 p-3 rounded-md';
+                        li.innerHTML = `
+                            <p class="font-semibold">${ex.name}</p>
+                            <p class="text-zinc-300 text-sm">${ex.details}</p>
+                        `;
+                        this.elements.viewExercisesList.appendChild(li);
+                    });
+                    this.elements.startSessionBtn.dataset.workoutId = id;
+                    this.elements.viewWorkoutModal.classList.remove('hidden');
+                    this.elements.viewWorkoutModal.classList.add('flex');
+                },
+
+                closeViewModal() {
+                    this.elements.viewWorkoutModal.classList.add('hidden');
+                    this.elements.viewWorkoutModal.classList.remove('flex');
+                },
+                
+                startWorkoutSession() {
+                    const workoutId = this.elements.startSessionBtn.dataset.workoutId;
+                    const workout = this.state.workouts.find(w => w.id == workoutId);
+                    if (workout) {
+                        this.state.history.push({
+                            id: Date.now(),
+                            workoutName: workout.name,
+                            date: new Date().toISOString()
+                        });
+                        this.saveState();
+                        this.renderHistory();
+                        this.closeViewModal();
+                        alert(`Sessão de '${workout.name}' iniciada e registrada no histórico!`);
+                    }
+                },
+
+                // Lógica do Timer
+                updateTimerDisplay() {
+                    const minutes = Math.floor(this.state.timer.remaining / 60).toString().padStart(2, '0');
+                    const seconds = (this.state.timer.remaining % 60).toString().padStart(2, '0');
+                    this.elements.timerDisplay.textContent = `${minutes}:${seconds}`;
+                },
+
+                toggleTimer() {
+                    if (this.state.timer.isRunning) {
+                        clearInterval(this.state.timer.interval);
+                        this.state.timer.isRunning = false;
+                        this.elements.startTimerBtn.textContent = 'Continuar';
+                        this.elements.startTimerBtn.classList.replace('bg-yellow-500', 'bg-lime-500');
+                        this.elements.startTimerBtn.classList.replace('hover:bg-yellow-600', 'hover:bg-lime-600');
+                    } else {
+                        this.state.timer.isRunning = true;
+                        this.elements.startTimerBtn.textContent = 'Pausar';
+                        this.elements.startTimerBtn.classList.replace('bg-lime-500', 'bg-yellow-500');
+                        this.elements.startTimerBtn.classList.replace('hover:bg-lime-600', 'hover:bg-yellow-600');
+                        this.state.timer.interval = setInterval(() => {
+                            this.state.timer.remaining--;
+                            this.updateTimerDisplay();
+                            if (this.state.timer.remaining <= 0) {
+                                this.finishTimer();
+                            }
+                        }, 1000);
+                    }
+                },
+                
+                finishTimer() {
+                    clearInterval(this.state.timer.interval);
+                    this.state.timer.isRunning = false;
+                    this.elements.startTimerBtn.textContent = 'Iniciar';
+                    this.elements.startTimerBtn.classList.replace('bg-yellow-500', 'bg-lime-500');
+                    this.elements.startTimerBtn.classList.replace('hover:bg-yellow-600', 'hover:bg-lime-600');
+                    this.elements.timerDisplay.classList.add('lime-glow');
+                    
+                    // Alarme sonoro
+                    const synth = new Tone.Synth().toDestination();
+                    synth.triggerAttackRelease("C5", "8n", Tone.now());
+                    synth.triggerAttackRelease("G5", "8n", Tone.now() + 0.2);
+
+                    setTimeout(() => {
+                        this.elements.timerDisplay.classList.remove('lime-glow');
+                        this.resetTimer();
+                    }, 2000);
+                },
+
+                resetTimer() {
+                    clearInterval(this.state.timer.interval);
+                    this.state.timer.isRunning = false;
+                    this.state.timer.remaining = this.state.timer.duration;
+                    this.elements.startTimerBtn.textContent = 'Iniciar';
+                    this.elements.startTimerBtn.classList.replace('bg-yellow-500', 'bg-lime-500');
+                    this.elements.startTimerBtn.classList.replace('hover:bg-yellow-600', 'hover:bg-lime-600');
+                    this.updateTimerDisplay();
+                },
+                
+                setTimerDuration(seconds) {
+                    this.state.timer.duration = seconds;
+                    this.resetTimer();
+                },
+
+                // Lógica de Histórico
+                renderHistory() {
+                    this.elements.historyList.innerHTML = '';
+                    if (this.state.history.length === 0) {
+                         this.elements.historyList.innerHTML = `<p class="text-center text-zinc-400 py-4">Nenhuma sessão registrada.</p>`;
+                         return;
+                    }
+                    const sortedHistory = [...this.state.history].sort((a, b) => new Date(b.date) - new Date(a.date));
+                    sortedHistory.forEach(item => {
+                        const date = new Date(item.date);
+                        const el = document.createElement('div');
+                        el.className = 'bg-zinc-700/50 p-3 rounded-md flex justify-between items-center';
+                        el.innerHTML = `
+                            <p class="font-semibold">${item.workoutName}</p>
+                            <p class="text-sm text-zinc-400">${date.toLocaleDateString('pt-BR')} ${date.toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}</p>
+                        `;
+                        this.elements.historyList.appendChild(el);
+                    });
+                },
+                
+                renderChart() {
+                    const historyData = this.state.history.reduce((acc, item) => {
+                        const date = new Date(item.date).toLocaleDateString('pt-BR');
+                        acc[date] = (acc[date] || 0) + 1;
+                        return acc;
+                    }, {});
+
+                    const labels = Object.keys(historyData).reverse();
+                    const data = Object.values(historyData).reverse();
+                    
+                    if(this.chartInstance) {
+                        this.chartInstance.destroy();
+                    }
+
+                    this.chartInstance = new Chart(this.elements.chartCanvas, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Treinos por Dia',
+                                data: data,
+                                fill: true,
+                                backgroundColor: 'rgba(163, 230, 53, 0.2)',
+                                borderColor: '#a3e635',
+                                tension: 0.1,
+                                pointBackgroundColor: '#a3e635',
+                                pointRadius: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        color: '#a1a1aa',
+                                        stepSize: 1
+                                    },
+                                    grid: {
+                                        color: 'rgba(255, 255, 255, 0.1)'
+                                    }
+                                },
+                                x: {
+                                    ticks: {
+                                        color: '#a1a1aa'
+                                    },
+                                    grid: {
+                                        display: false
+                                    }
+                                }
+                            }
+                        }
+                    });
+                },
+                
+                // Persistência
+                saveState() {
+                    localStorage.setItem('treinoFitState', JSON.stringify(this.state));
+                },
+
+                loadState() {
+                    const savedState = localStorage.getItem('treinoFitState');
+                    if (savedState) {
+                        this.state = JSON.parse(savedState);
+                    }
+                }
+            };
+
+            app.init();
+        });
+    </script>
+
+</body>
+</html>
