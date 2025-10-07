@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TreinoFit — Bora treinar</title>
+
+  <!-- Chart.js (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <!-- Poppins font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg: #050505;
+      --card: #0f0f0f;
+      --text: #e9f5ef;
+      --accent: #b7ff3a; /* verde-limão */
+      --muted: #9aa29b;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;
+      font-family: 'Poppins', Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:linear-gradient(180deg,var(--bg),#0b0b0b);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+    }
+
+    .wrap{max-width:1100px;margin:18px auto;padding:16px}
+    header{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .brand{display:flex;gap:12px;align-items:center}
+    /* Logo image */
+    .logo{
+      width:64px;
+      height:64px;
+      border-radius:12px;
+      overflow:hidden;
+      display:block;
+      object-fit:cover;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.6);
+      border: 2px solid rgba(183,255,58,0.12);
+      background: linear-gradient(180deg,var(--accent), #a6e433);
+    }
+
+    h1{margin:0;font-size:20px;font-weight:700}
+    .tagline{color:var(--muted);font-size:13px;font-weight:400}
+    .controls{display:flex;gap:8px;align-items:center}
+    .btn{background:var(--accent);color:#000;padding:8px 12px;border-radius:10px;border:none;cursor:pointer;font-weight:700}
+    .btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text);padding:8px 10px;border-radius:10px;cursor:pointer}
+    .grid{display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-top:16px}
+    @media(max-width:880px){.grid{grid-template-columns:1fr}}
+    .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 16px rgba(0,0,0,0.6);border:1px solid rgba(255,255,255,0.03)}
+    .list-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.02);cursor:pointer}
+    .muted{color:var(--muted);font-size:13px}
+    .small{font-size:13px;color:var(--muted);font-weight:400}
+    .input-file{position:relative;overflow:hidden;display:inline-block}
+    .input-file input[type=file]{position:absolute;left:0;top:0;opacity:0;width:100%;height:100%;cursor:pointer}
+    .field{display:flex;gap:8px;align-items:center}
+    .form-row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+    input[type=text], select, input[type=number]{padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text);min-width:0}
+    label{font-size:13px;color:var(--muted);font-weight:400}
+    .footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+    .tag{background:rgba(183,255,58,0.12);color:var(--accent);padding:6px 8px;border-radius:8px;font-weight:700}
+    .controls-right{display:flex;gap:8px;align-items:center}
+    .logs{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+    .note{font-size:13px;color:var(--muted);margin-top:8px}
+    .chart-wrap{height:200px}
+    /* small helpers */
+    .space-between{display:flex;justify-content:space-between;align-items:center}
+    /* Make sure headings use Poppins bold and body text Poppins regular */
+    h1, h2, h3, strong { font-weight:700; font-family:'Poppins',sans-serif; }
+    body, input, select, textarea, .small, .muted { font-weight:400; font-family:'Poppins',sans-serif; }
+    /* Responsive tweaks */
+    @media (max-width:560px){
+      header{flex-direction:column;align-items:flex-start;gap:10px}
+      .controls{align-self:stretch;justify-content:space-between}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <!-- Logo image (use the file Image_fx.png in same folder) -->
+        <img src="Image_fx.png" alt="TreinoFit" class="logo" />
+        <div>
+          <h1>TreinoFit</h1>
+          <div class="tagline">Bora treinar 💪</div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <label class="input-file btn-ghost" title="Importar treino (.pdf .doc .docx)">
+          📁 Importar treino
+          <input id="fileImport" type="file" accept=".pdf,.doc,.docx" />
+        </label>
+        <button id="btnNew" class="btn">+ Criar treino</button>
+      </div>
+    </header>
+
+    <main class="grid">
+      <!-- left column: treinos -->
+      <section class="card">
+        <div class="space-between">
+          <div style="font-weight:800">Treinos salvos</div>
+          <div class="small" id="countTreinos">—</div>
+        </div>
+
+        <div id="listWorkouts" style="margin-top:10px;display:flex;flex-direction:column;gap:8px"></div>
+
+        <div style="margin-top:12px">
+          <div style="font-weight:700">Importante</div>
+          <div class="note">Arquivos importados ficam salvos no seu navegador (localStorage). Você pode abrir/baixar no botão "Abrir".</div>
+        </div>
+      </section>
+
+      <!-- right column: detalhe -->
+      <section class="card">
+        <div id="detailArea">
+          <div id="placeholder">
+            <div style="font-weight:800">Selecione um treino</div>
+            <div class="muted" style="margin-top:8px">Crie um treino ou importe um arquivo para começar.</div>
+          </div>
+
+          <div id="workoutDetail" style="display:none">
+            <div class="space-between">
+              <div>
+                <div style="font-weight:900;font-size:18px" id="detailName"></div>
+                <div class="small" id="detailType"></div>
+              </div>
+
+              <div style="display:flex;gap:8px;align-items:center">
+                <div class="small" id="timerLabel">Timer: —</div>
+                <button class="btn-ghost" id="btn60">Descanso 60s</button>
+                <button class="btn" id="btnRegister">Registrar sessão</button>
+              </div>
+            </div>
+
+            <div style="margin-top:12px">
+              <div style="font-weight:700">Exercícios</div>
+              <div id="exList" style="margin-top:8px;display:flex;flex-direction:column;gap:8px"></div>
+
+              <!-- adicionar exercício manual -->
+              <div style="margin-top:10px">
+                <div style="font-weight:700">Adicionar exercício</div>
+                <div class="form-row">
+                  <input id="exName" type="text" placeholder="Nome do exercício" />
+                  <input id="exSets" type="number" placeholder="Sets" min="1" style="width:70px" />
+                  <input id="exReps" type="number" placeholder="Reps" min="1" style="width:70px" />
+                  <input id="exWeight" type="number" placeholder="Kg" min="0" style="width:70px" />
+                  <button id="btnAddEx" class="btn-ghost">Adicionar</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="logs">
+              <div style="font-weight:700;margin-top:10px">Diário</div>
+              <div id="logList"></div>
+            </div>
+
+            <div style="margin-top:12px">
+              <div style="font-weight:700">Evolução semanal</div>
+              <div class="chart-wrap"><canvas id="chartVolume"></canvas></div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      TreinoFit • Dados salvos localmente no seu navegador
+    </footer>
+  </div>
+
+  <script>
+    /*****************************************************************
+     * TreinoFit - single-file HTML/JS app (mantive o JS original)
+     *****************************************************************/
+
+    // localStorage keys
+    const LS_WORKOUTS = 'treinofit_html_workouts_v1';
+    const LS_LOGS = 'treinofit_html_logs_v1';
+
+    // shortcuts to elements
+    const fileImport = document.getElementById('fileImport');
+    const listWorkouts = document.getElementById('listWorkouts');
+    const countTreinos = document.getElementById('countTreinos');
+    const btnNew = document.getElementById('btnNew');
+    const placeholder = document.getElementById('placeholder');
+    const workoutDetail = document.getElementById('workoutDetail');
+    const detailName = document.getElementById('detailName');
+    const detailType = document.getElementById('detailType');
+    const exList = document.getElementById('exList');
+    const btn60 = document.getElementById('btn60');
+    const btnRegister = document.getElementById('btnRegister');
+    const timerLabel = document.getElementById('timerLabel');
+    const btnAddEx = document.getElementById('btnAddEx');
+    const exName = document.getElementById('exName');
+    const exSets = document.getElementById('exSets');
+    const exReps = document.getElementById('exReps');
+    const exWeight = document.getElementById('exWeight');
+    const logList = document.getElementById('logList');
+    const chartCtx = document.getElementById('chartVolume').getContext('2d');
+
+    let workouts = loadJSON(LS_WORKOUTS) || [];
+    let logs = loadJSON(LS_LOGS) || [];
+    let selectedId = workouts[0]?.id || null;
+    let timerSec = 0;
+    let timerInterval = null;
+    let chart = null;
+
+    // helper UID
+    function uid(prefix='id'){ return prefix + '_' + Math.random().toString(36).slice(2,9); }
+
+    // load/save helpers
+    function saveJSON(key,obj){ localStorage.setItem(key, JSON.stringify(obj)); }
+    function loadJSON(key){ try{ const r = localStorage.getItem(key); return r ? JSON.parse(r) : null; }catch(e){return null} }
+
+    // init with a default workout if none
+    if(!workouts || workouts.length === 0){
+      workouts = [{
+        id: uid('w'),
+        name: 'Full Body - A',
+        type: 'musculacao',
+        exercises: [{ id: uid('ex'), name: 'Supino Reto', sets: 3, reps: 8, weight: 60 }]
+      }];
+      saveJSON(LS_WORKOUTS, workouts);
+    }
+
+    // UI renderers
+    function renderWorkouts(){
+      listWorkouts.innerHTML = '';
+      countTreinos.textContent = workouts.length + ' treinos';
+      workouts.forEach(w => {
+        const div = document.createElement('div');
+        div.className = 'list-item';
+        const left = document.createElement('div');
+        const title = document.createElement('div');
+        title.style.fontWeight = '800';
+        title.textContent = w.name;
+        if(w.imported) {
+          const tag = document.createElement('span'); tag.className='tag'; tag.style.marginLeft='8px'; tag.textContent='importado';
+          title.appendChild(tag);
+        }
+        const subtitle = document.createElement('div'); subtitle.className='small';
+        subtitle.textContent = w.type === 'cardio' ? 'Cardio' : (w.imported ? 'Arquivo importado' : 'Musculação');
+        left.appendChild(title); left.appendChild(subtitle);
+
+        const right = document.createElement('div');
+        right.style.display = 'flex'; right.style.gap = '8px'; right.style.alignItems = 'center';
+        if(w.imported){
+          const openBtn = document.createElement('button'); openBtn.className='btn-ghost'; openBtn.textContent='Abrir';
+          openBtn.onclick = (e)=>{ e.stopPropagation(); openImported(w); };
+          right.appendChild(openBtn);
+        }
+        const removeBtn = document.createElement('button'); removeBtn.className='btn-ghost'; removeBtn.textContent='Remover';
+        removeBtn.onclick = (e)=>{ e.stopPropagation(); if(confirm('Remover treino?')){ workouts = workouts.filter(x=>x.id!==w.id); saveJSON(LS_WORKOUTS,workouts); if(selectedId===w.id) selectedId=null; renderAll(); } };
+        right.appendChild(removeBtn);
+
+        div.appendChild(left);
+        div.appendChild(right);
+        div.onclick = ()=>{ selectedId = w.id; renderDetail(); };
+        listWorkouts.appendChild(div);
+      });
+    }
+
+    function renderDetail(){
+      const sel = workouts.find(w => w.id === selectedId);
+      if(!sel){
+        placeholder.style.display = 'block';
+        workoutDetail.style.display = 'none';
+        return;
+      }
+      placeholder.style.display = 'none';
+      workoutDetail.style.display = 'block';
+      detailName.textContent = sel.name;
+      detailType.textContent = sel.type === 'cardio' ? 'Cardio' : (sel.imported ? 'Arquivo importado' : 'Musculação');
+      renderExercises(sel);
+      renderLogs(sel);
+      updateChart();
+    }
+
+    function renderExercises(sel){
+      exList.innerHTML = '';
+      if(!sel.exercises || sel.exercises.length===0){
+        const p = document.createElement('div'); p.className='small'; p.textContent = sel.imported ? 'Sem exercícios (arquivo importado ou treino vazio)' : 'Nenhum exercício ainda';
+        exList.appendChild(p);
+        return;
+      }
+      sel.exercises.forEach((ex, idx)=>{
+        const row = document.createElement('div');
+        row.className = 'list-item';
+        const left = document.createElement('div');
+        const t = document.createElement('div'); t.style.fontWeight='700'; t.textContent = (idx+1) + '. ' + ex.name;
+        const sub = document.createElement('div'); sub.className='small'; sub.textContent = ex.sets ? `${ex.sets}x${ex.reps} @ ${ex.weight}kg` : '';
+        left.appendChild(t); left.appendChild(sub);
+
+        const right = document.createElement('div'); right.style.display='flex'; right.style.gap='8px';
+        const edit = document.createElement('button'); edit.className='btn-ghost'; edit.textContent='editar';
+        edit.onclick = (e) => {
+          e.stopPropagation();
+          if(!ex.sets){
+            alert('Exercício sem sets/reps para editar carga.');
+            return;
+          }
+          const w = prompt('Nova carga (kg)', ex.weight || 0);
+          if(w !== null){ ex.weight = Number(w); saveAndRefresh(); }
+        };
+        const reg = document.createElement('button'); reg.className='btn'; reg.textContent='Registrar';
+        reg.onclick = (e) => { e.stopPropagation(); logSession(sel.id, { note: `Realizado: ${ex.name}`, exercises: [ex] }); alert('Exercício registrado!'); };
+        right.appendChild(edit); right.appendChild(reg);
+
+        row.appendChild(left); row.appendChild(right);
+        exList.appendChild(row);
+      });
+    }
+
+    function renderLogs(sel){
+      logList.innerHTML = '';
+      const selLogs = logs.filter(l => l.workoutId === sel.id);
+      if(selLogs.length===0){
+        const p = document.createElement('div'); p.className='small'; p.textContent='Nenhum registro ainda.';
+        logList.appendChild(p);
+        return;
+      }
+      selLogs.forEach(l=>{
+        const item = document.createElement('div'); item.className='list-item'; item.style.alignItems='flex-start';
+        const left = document.createElement('div');
+        const t = document.createElement('div'); t.style.fontWeight='700'; t.textContent = new Date(l.date).toLocaleString();
+        const sub = document.createElement('div'); sub.className='small'; sub.textContent = l.details?.note || '';
+        left.appendChild(t); left.appendChild(sub);
+        const right = document.createElement('div'); right.className='small'; right.textContent = (l.details?.exercises || []).length + ' ex';
+        item.appendChild(left); item.appendChild(right);
+        logList.appendChild(item);
+      });
+    }
+
+    // add workout flow
+    btnNew.onclick = ()=>{
+      const name = prompt('Nome do treino','Treino Novo');
+      if(!name) return;
+      const type = prompt('Tipo: musculacao ou cardio','musculacao') || 'musculacao';
+      const w = { id: uid('w'), name, type: (type==='cardio' ? 'cardio' : 'musculacao'), exercises: [] };
+      workouts.unshift(w);
+      saveJSON(LS_WORKOUTS,workouts);
+      selectedId = w.id;
+      renderAll();
+    };
+
+    // import file
+    fileImport.addEventListener('change', async (ev)=>{
+      const f = ev.target.files[0];
+      if(!f) return;
+      const allowed = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      // we accept by extension too
+      const name = f.name;
+      const ext = name.split('.').pop().toLowerCase();
+      if(!['pdf','doc','docx'].includes(ext)){
+        alert('Formato inválido. Use .pdf, .doc ou .docx');
+        ev.target.value = '';
+        return;
+      }
+      const arr = await f.arrayBuffer();
+      const b64 = arrayBufferToBase64(arr);
+      const imported = { id: uid('imp'), name: f.name, type: f.type || mimeFromExt(ext), b64, size: f.size, date: new Date().toISOString() };
+      const workout = { id: imported.id, name: imported.name, type: 'importado', exercises: [], imported };
+      workouts.unshift(workout);
+      saveJSON(LS_WORKOUTS,workouts);
+      ev.target.value = '';
+      selectedId = workout.id;
+      alert('Arquivo importado e salvo nos seus treinos!');
+      renderAll();
+    });
+
+    function mimeFromExt(ext){
+      if(ext==='pdf') return 'application/pdf';
+      if(ext==='docx') return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      if(ext==='doc') return 'application/msword';
+      return 'application/octet-stream';
+    }
+
+    function arrayBufferToBase64(buffer){
+      // convert to binary string in chunks for large files
+      const bytes = new Uint8Array(buffer);
+      const chunkSize = 0x8000;
+      let binary = '';
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const slice = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, slice);
+      }
+      return btoa(binary);
+    }
+
+    function openImported(workout){
+      if(!workout.imported) return;
+      const b64 = workout.imported.b64;
+      const type = workout.imported.type || 'application/octet-stream';
+      // decode base64
+      const byteCharacters = atob(b64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type });
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    }
+
+    // add exercise to selected workout
+    btnAddEx.onclick = ()=>{
+      const sel = workouts.find(w => w.id === selectedId);
+      if(!sel) return alert('Selecione um treino primeiro.');
+      const name = exName.value.trim();
+      if(!name) return alert('Digite o nome do exercício');
+      const sets = Number(exSets.value) || 0;
+      const reps = Number(exReps.value) || 0;
+      const weight = Number(exWeight.value) || 0;
+      const ex = { id: uid('ex'), name, sets: sets||null, reps: reps||null, weight: weight||null };
+      sel.exercises = sel.exercises || [];
+      sel.exercises.push(ex);
+      saveAndRefresh();
+      exName.value=''; exSets.value=''; exReps.value=''; exWeight.value='';
+    };
+
+    // register entire session (logs)
+    btnRegister.onclick = ()=>{
+      const sel = workouts.find(w => w.id === selectedId);
+      if(!sel) return alert('Selecione um treino');
+      logSession(sel.id, { note: 'Sessão: ' + sel.name, exercises: sel.exercises || [] });
+      alert('Treino registrado!');
+      renderAll();
+    };
+
+    function logSession(workoutId, details){
+      const entry = { id: uid('log'), workoutId, date: new Date().toISOString(), details };
+      logs.unshift(entry);
+      saveJSON(LS_LOGS, logs);
+    }
+
+    // timer
+    btn60.onclick = ()=> startTimer(60);
+    function startTimer(seconds=60){
+      timerSec = seconds;
+      updateTimerLabel();
+      if(timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(()=>{
+        timerSec--;
+        if(timerSec <= 0){
+          clearInterval(timerInterval); timerInterval=null; timerSec=0;
+          updateTimerLabel();
+          // try browser notification
+          if('Notification' in window && Notification.permission === 'granted'){
+            new Notification('Descanso encerrado', { body: 'Hora de voltar pro treino!' });
+          } else if('Notification' in window && Notification.permission !== 'denied'){
+            Notification.requestPermission().then(p => {
+              if(p === 'granted') new Notification('Descanso encerrado', { body: 'Hora de voltar pro treino!' });
+            });
+          }
+        } else {
+          updateTimerLabel();
+        }
+      }, 1000);
+    }
+    function updateTimerLabel(){
+      timerLabel.textContent = timerSec > 0 ? `Timer: ${Math.floor(timerSec/60)}:${String(timerSec%60).padStart(2,'0')}` : 'Timer: —';
+    }
+
+    // chart
+    function updateChart(){
+      const data = aggregatedByWeek();
+      const labels = data.map(d=>d.week);
+      const values = data.map(d=>d.volume);
+      if(!chart){
+        chart = new Chart(chartCtx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Volume (kg x rep x set)',
+              data: values,
+              borderColor: '#b7ff3a',
+              backgroundColor: 'rgba(183,255,58,0.08)',
+              tension: 0.3,
+              fill: true,
+              pointRadius: 3
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { color: '#cfeccf' } },
+              y: { ticks: { color: '#cfeccf' } }
+            }
+          }
+        });
+      } else {
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = values;
+        chart.update();
+      }
+    }
+
+    // aggregation: group logs by week and sum (sets * reps * weight) for muscular logs
+    function aggregatedByWeek(){
+      // Create map week->volume
+      const map = {};
+      logs.forEach(l=>{
+        const d = new Date(l.date);
+        const weekNo = getWeekNumber(d);
+        const label = `${d.getFullYear()}-W${weekNo}`;
+        if(!map[label]) map[label] = 0;
+        const exercises = l.details?.exercises || [];
+        // compute value for this log: sum sets*reps*weight for each exercise
+        // do step-by-step calculation to avoid mistakes:
+        let logSum = 0;
+        exercises.forEach(ex=>{
+          const sets = Number(ex.sets) || 0;
+          const reps = Number(ex.reps) || 0;
+          const weight = Number(ex.weight) || 0;
+          // multiply sets * reps -> a
+          const a = sets * reps;
+          // multiply a * weight -> b
+          const b = a * weight;
+          // add to logSum
+          logSum += b;
+        });
+        map[label] += logSum;
+      });
+      // convert to sorted array
+      return Object.keys(map).sort().map(k=>({ week: k, volume: Math.round(map[k]) }));
+    }
+
+    // ISO week number helper (ISO-8601)
+    function getWeekNumber(d){
+      const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const dayNum = date.getUTCDay() || 7;
+      date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+      const weekNo = Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+      return weekNo;
+    }
+
+    // utility save and refresh
+    function saveAndRefresh(){
+      saveJSON(LS_WORKOUTS, workouts);
+      saveJSON(LS_LOGS, logs);
+      renderAll();
+    }
+
+    function renderAll(){
+      renderWorkouts();
+      renderDetail();
+    }
+
+    // initial render
+    renderAll();
+
+    // helper: open imported file from id (already implemented openImported)
+    // expose save for debugging
+    window.TreinoFit = { workouts, logs, saveJSON, loadJSON };
+
+    // small UX: show latest selected if none
+    if(!selectedId && workouts.length) selectedId = workouts[0].id;
+    renderDetail();
+  </script>
+</body>
+</html>
